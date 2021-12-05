@@ -10,6 +10,7 @@ import torchvision.transforms as transforms
 import os
 import argparse
 import csv
+import yaml
 
 from models import *
 
@@ -46,6 +47,9 @@ use_cuda = torch.cuda.is_available()
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 batch_size = args.batchsize
 
+os.chdir(os.path.dirname(__file__))
+with open("config.yaml", "r") as stream:
+    CONFIG = yaml.safe_load(stream)
 
 
 # Data
@@ -65,10 +69,10 @@ transform_test = transforms.Compose([
 
 dataset_func = torchvision.datasets.CIFAR10
 
-trainset = dataset_func(root='./data', train=True, download=True, transform=transform_train)
+trainset = dataset_func(root=CONFIG['path_to_dataset'], train=True, download=True, transform=transform_train)
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
 
-testset = dataset_func(root='./data', train=False, download=True, transform=transform_test)
+testset = dataset_func(root=CONFIG['path_to_dataset'], train=False, download=True, transform=transform_test)
 testloader = torch.utils.data.DataLoader(testset, batch_size=200, shuffle=False, num_workers=2)
 
 
