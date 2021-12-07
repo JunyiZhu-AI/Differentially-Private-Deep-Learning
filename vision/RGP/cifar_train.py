@@ -131,7 +131,7 @@ if not os.path.exists(path):
 result_folder = path
 if not os.path.exists(result_folder):
     os.makedirs(result_folder)
-logname = result_folder +  args.sess  + '.csv'
+logname = os.path.join(result_folder, args.sess  + '.csv')
 
 if use_cuda:
     net.cuda()
