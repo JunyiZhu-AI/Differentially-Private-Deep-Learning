@@ -1,7 +1,8 @@
 import numpy as np
 
-from opacus.privacy_analysis import compute_rdp, get_privacy_spent
+# from opacus.privacy_analysis import compute_rdp, get_privacy_spent
 from rdp_accountant import compute_rdp, get_privacy_spent
+
 
 
 def loop_for_sigma(q, T, eps, delta, cur_sigma, interval, rdp_orders=32):
@@ -10,7 +11,7 @@ def loop_for_sigma(q, T, eps, delta, cur_sigma, interval, rdp_orders=32):
         orders = np.arange(2, rdp_orders, 0.1)
         steps = T
         rdp = compute_rdp(q, cur_sigma, steps, orders)
-        cur_eps, _ = get_privacy_spent(orders, rdp, delta)
+        cur_eps, _, _ = get_privacy_spent(orders, rdp, delta)
         if(cur_eps<eps and cur_sigma>interval):
             cur_sigma -= interval
             previous_eps = cur_eps
