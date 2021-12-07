@@ -1,6 +1,7 @@
 import numpy as np
 
 from opacus.privacy_analysis import compute_rdp, get_privacy_spent
+from rdp_accountant import compute_rdp, get_privacy_spent
 
 
 def loop_for_sigma(q, T, eps, delta, cur_sigma, interval, rdp_orders=32):
