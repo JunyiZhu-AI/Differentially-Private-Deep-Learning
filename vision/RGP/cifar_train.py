@@ -48,7 +48,7 @@ start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 batch_size = args.batchsize
 best_acc = 0
 
-os.chdir(os.path.dirname(__file__))
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 with open("config.yaml", "r") as stream:
     CONFIG = yaml.safe_load(stream)
 
