@@ -6,7 +6,7 @@ import torch.backends.cudnn as cudnn
 
 import torchvision
 import torchvision.transforms as transforms
-
+import pandas as pd
 import os
 import argparse
 import csv
@@ -14,11 +14,6 @@ import yaml
 import tqdm
 
 from models import *
-
-
-import numpy as np
-import random
-
 import time
 
 from get_noise_variance import get_sigma
@@ -41,12 +36,17 @@ parser.add_argument('--rank', default=16, type=int, help='rank of reparameteriza
 parser.add_argument('--clipping', default=1., type=float, help='clipping threshold')
 parser.add_argument('--warmup_epoch', default=-1, type=int, help='num. of epochs for warmup')
 
+parser.add_argument('--process', default=0, type=int, help='process number')
+parser.add_argument('--path_to_result', default='', type=str)
+parser.add_argument('--subdir', default='', type=str)
+
 
 args = parser.parse_args()
 
 use_cuda = torch.cuda.is_available()
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 batch_size = args.batchsize
+best_acc = 0
 
 os.chdir(os.path.dirname(__file__))
 with open("config.yaml", "r") as stream:
@@ -124,7 +124,11 @@ sigma = get_sigma(q, steps, args.eps, args.delta)[0]
 print('noise standard deviation for eps = %.1f: '%args.eps, sigma)
 
 
-result_folder = './results/'
+path = os.path.join(args.path_to_result, args.subdir, str(args.process))
+if not os.path.exists(path):
+    os.makedirs(path)
+
+result_folder = path
 if not os.path.exists(result_folder):
     os.makedirs(result_folder)
 logname = result_folder +  args.sess  + '.csv'
@@ -295,7 +299,7 @@ def test(epoch):
     test_loss = 0
     correct = 0
     total = 0
-
+    global best_acc
 
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(testloader):
@@ -313,7 +317,8 @@ def test(epoch):
 
         acc = 100.*float(correct)/float(total)
         print('test loss:%.5f'%(test_loss/(batch_idx+1)), 'test acc:', acc)
-
+        if acc > best_acc:
+            best_acc = acc
 
     return (test_loss/batch_idx, acc)
 
@@ -349,12 +354,16 @@ if not os.path.exists(logname):
         logwriter.writerow(['epoch', 'lr', 'train loss', 'train acc', 'test loss', 'test acc'])
 
 
-for epoch in range(start_epoch, args.n_epoch):
-    lr = adjust_learning_rate(optimizer, epoch)
+if not os.path.isfile(os.path.join(path, 'res.csv')):
+    for epoch in range(start_epoch, args.n_epoch):
+        lr = adjust_learning_rate(optimizer, epoch)
 
-    train_loss, train_acc = train(epoch)
-    test_loss, test_acc = test(epoch)
+        train_loss, train_acc = train(epoch)
+        test_loss, test_acc = test(epoch)
 
-    with open(logname, 'a') as logfile:
-        logwriter = csv.writer(logfile, delimiter=',')
-        logwriter.writerow([epoch, lr, train_loss, train_acc, test_loss, test_acc])
+        with open(logname, 'a') as logfile:
+            logwriter = csv.writer(logfile, delimiter=',')
+            logwriter.writerow([epoch, lr, train_loss, train_acc, test_loss, test_acc])
+
+    df = pd.DataFrame({'best_acc': best_acc}, index=[0])
+    df.to_csv(os.path.join(path, f'res.csv'), index=False)
