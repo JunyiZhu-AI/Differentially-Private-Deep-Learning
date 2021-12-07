@@ -4,6 +4,7 @@ from typing import Union
 
 import numpy as np
 import torch
+import torchvision
 from torch import nn
 from torch.functional import F
 
@@ -60,3 +61,32 @@ def _compute_linear_grad_sample(
         batch_dim: Batch dimension position
     """
     layer.weight.grad_sample = torch.einsum("n...i,n...j->n...ij", B, A)
+
+
+class CachedCIFAR10(torchvision.datasets.CIFAR10):
+    def __init__(self, root, train, download, wrapper_transform, use_cache=False):
+        super(CachedCIFAR10, self).__init__(root=root, train=train, transform=None, download=download)
+        self.cached_data = []
+        self.cached_target = []
+        self.use_cache = use_cache
+        self.wrapper_transform = wrapper_transform
+
+    def __getitem__(self, index):
+        if not self.use_cache:
+            img, label = super(CachedCIFAR10, self).__getitem__(index)
+            self.cached_data.append(img)
+            self.cached_target.append(label)
+        else:
+            img, label = self.cached_data[index], self.cached_target[index]
+        if self.wrapper_transform is not None:
+            img = self.wrapper_transform(img)
+        return img, label
+
+    def set_use_cache(self, use_cache):
+        if use_cache:
+            self.cached_data = np.stack(self.cached_data, axis=0)
+            self.cached_target = np.stack(self.cached_target, axis=0)
+        else:
+            self.cached_data = []
+            self.cached_target = []
+        self.use_cache = use_cache

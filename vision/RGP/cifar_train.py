@@ -11,6 +11,7 @@ import os
 import argparse
 import csv
 import yaml
+import tqdm
 
 from models import *
 
@@ -67,14 +68,28 @@ transform_test = transforms.Compose([
 ])
 
 
-dataset_func = torchvision.datasets.CIFAR10
+# dataset_func = torchvision.datasets.CIFAR10
+trainset = CachedCIFAR10(root=CONFIG['path_to_dataset'], train=True, download=True, wrapper_transform=transform_train)
+testset = CachedCIFAR10(root=CONFIG['path_to_dataset'], train=False, download=True, wrapper_transform=transform_test)
 
-trainset = dataset_func(root=CONFIG['path_to_dataset'], train=True, download=True, transform=transform_train)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
+# trainset = dataset_func(root=CONFIG['path_to_dataset'], train=True, download=True, transform=transform_train)
+# trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
 
-testset = dataset_func(root=CONFIG['path_to_dataset'], train=False, download=True, transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=200, shuffle=False, num_workers=2)
+# testset = dataset_func(root=CONFIG['path_to_dataset'], train=False, download=True, transform=transform_test)
+# testloader = torch.utils.data.DataLoader(testset, batch_size=200, shuffle=False, num_workers=2)
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=0)
+testloader = torch.utils.data.DataLoader(testset, batch_size=200, shuffle=False, num_workers=0)
 
+t_trainloader = tqdm.tqdm(trainloader)
+for _ in t_trainloader:
+    t_trainloader.set_description(f'Cached training data: {len(trainloader.dataset.cached_data)}')
+t_testloader = tqdm.tqdm(testloader)
+for _ in t_testloader:
+    t_testloader.set_description(f'Cached training data: {len(testloader.dataset.cached_data)}')
+trainloader.dataset.set_use_cache(use_cache=True)
+trainloader.num_workers = CONFIG['num_workers']
+testloader.dataset.set_use_cache(use_cache=True)
+testloader.num_workers = CONFIG['num_workers']
 
 
 # Model
