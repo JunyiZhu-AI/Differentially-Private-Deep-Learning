@@ -302,7 +302,7 @@ def train(epoch):
 
     t1 = time.time()
     print('Train loss:%.5f'%(train_loss/(batch_idx+1)), 'time: %d s'%(t1-t0), 'train acc:', acc,
-          'density', mask.sum() / mask.numel(), end=' ')
+          'density', (mask.sum() / mask.numel()).item(), end=' ')
 
     return (train_loss/batch_idx, acc)
 
