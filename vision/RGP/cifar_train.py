@@ -381,4 +381,11 @@ if not os.path.isfile(os.path.join(path, 'res.csv')):
             logwriter.writerow([epoch, lr, train_loss, train_acc, test_loss, test_acc])
 
     df = pd.DataFrame({'best_acc': best_acc}, index=[0])
-    df.to_csv(os.path.join(path, f'res.csv'), index=False)
+    while True:
+        try:
+            df.to_csv(os.path.join(path, f'res.csv'), index=False)
+            break
+        except:
+            time.sleep(30)
+
+
