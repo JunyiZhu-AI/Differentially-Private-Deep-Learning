@@ -39,6 +39,8 @@ parser.add_argument('--warmup_epoch', default=-1, type=int, help='num. of epochs
 parser.add_argument('--process', default=0, type=int, help='process number')
 parser.add_argument('--path_to_result', default='', type=str)
 parser.add_argument('--subdir', default='', type=str)
+parser.add_argument('--freeze_end', default=-1, type=int, help='Gradual exit end epoch.')
+parser.add_argument('--freeze_rate', default=0, type=float, help='Percentage of paramters get exited finally.')
 
 
 args = parser.parse_args()
@@ -179,11 +181,11 @@ optimizer = optim.SGD(
 ghost_optimizer = optim.SGD(ghost_params, lr=1)
 
 
-num_p = 0
+ghost_num_p = 0
 for p in ghost_params:
-    num_p += p.numel()
+    ghost_num_p += p.numel()
 
-print('number of parameters (low-rank): %.3f M'%(num_p/1000000), end=' ')
+print('number of parameters (low-rank): %.3f M'%(ghost_num_p/1000000), end=' ')
 
 num_p = 0
 for p in params:
@@ -196,10 +198,11 @@ def clip_column(grad_sample, threshold=1.0):
     scale = torch.clamp(threshold/norms, max=1.0)
     grad_sample *= scale.view(-1, 1, 1)
 
-def process_grad_sample(params, clipping=1, inner_t=0):
+def process_grad_sample(params, mask, clipping=1, inner_t=0):
     n = params[0].grad_sample.shape[0]
     grad_norm_list = torch.zeros(n).cuda()
-    for p in params: 
+    for p, m in zip(params, mask):
+        p.grad_sample.mul_(m)
         flat_g = p.grad_sample.view(n, -1)
         current_norm_list = torch.norm(flat_g, dim=1)
         grad_norm_list += torch.square(current_norm_list)
@@ -226,11 +229,23 @@ def train(epoch):
     correct = 0
     total = 0
     t0 = time.time()
+    # compute current gradual exit rate
+    rate = np.clip(args.freeze_rate * epoch / (args.freeze_end - 1),
+                   0, args.freeze_rate) if args.freeze_end >= 0 else 0
+    tmp_mask = torch.randperm(ghost_num_p, device='cuda', dtype=torch.long)[:int(rate * ghost_num_p)]
+    mask = torch.ones(ghost_num_p, device='cuda')
+    mask[tmp_mask] = 0
+    assert 1 - rate >= mask.sum() / mask.numel() >= 0.95 * (1 - rate)
+    num = 0
+    ghost_mask = []
+    for p in ghost_params:
+        ghost_mask.append(mask[num:num+p.numel()].reshape(p.shape).unsqueeze(dim=0))
+        num += p.numel()
+    assert num == ghost_num_p
 
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
-
 
         for m in net.modules():
             if(hasattr(m, '_update_weight')):
@@ -252,7 +267,7 @@ def train(epoch):
             tiny_loss = loss_func(tiny_outputs, tiny_targets)
             tiny_loss.backward()
             # gradient clipping
-            process_grad_sample(ghost_params, clipping=args.clipping, inner_t=t)
+            process_grad_sample(ghost_params, ghost_mask, clipping=args.clipping, inner_t=t)
             if(loss == None):
                 loss = tiny_loss.detach()/inner_t
             else:
@@ -287,7 +302,7 @@ def train(epoch):
 
 
     t1 = time.time()
-    print('Train loss:%.5f'%(train_loss/(batch_idx+1)), 'time: %d s'%(t1-t0), 'train acc:', acc, end=' ')
+    print('Train loss:%.5f'%(train_loss/(batch_idx+1)), 'time: %d s'%(t1-t0), 'train acc:', acc, 'rate', rate, end=' ')
 
     return (train_loss/batch_idx, acc)
 
