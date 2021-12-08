@@ -235,7 +235,6 @@ def train(epoch):
     tmp_mask = torch.randperm(ghost_num_p, device='cuda', dtype=torch.long)[:int(rate * ghost_num_p)]
     mask = torch.ones(ghost_num_p, device='cuda')
     mask[tmp_mask] = 0
-    assert 1 - rate >= mask.sum() / mask.numel() >= 0.95 * (1 - rate)
     num = 0
     ghost_mask = []
     for p in ghost_params:
@@ -302,7 +301,8 @@ def train(epoch):
 
 
     t1 = time.time()
-    print('Train loss:%.5f'%(train_loss/(batch_idx+1)), 'time: %d s'%(t1-t0), 'train acc:', acc, 'rate', rate, end=' ')
+    print('Train loss:%.5f'%(train_loss/(batch_idx+1)), 'time: %d s'%(t1-t0), 'train acc:', acc,
+          'density', mask.sum() / mask.numel(), end=' ')
 
     return (train_loss/batch_idx, acc)
 
