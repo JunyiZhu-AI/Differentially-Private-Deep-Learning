@@ -28,6 +28,7 @@ parser.add_argument('--batchsize', default=1000, type=int, help='batch size')
 parser.add_argument('--n_epoch', default=400, type=int, help='total number of epochs')
 parser.add_argument('--lr', default=0.4, type=float, help='base learning rate (default=0.4)')
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum coeeficient')
+parser.add_argument('--subspace_momentum', default=0, type=float, help='momentum coeeficient')
 
 parser.add_argument('--eps', default=8, type=float, help='eps value')
 parser.add_argument('--width', default=10, type=int, help='model width')
@@ -235,6 +236,7 @@ def train(epoch):
     tmp_mask = torch.randperm(ghost_num_p, device='cuda', dtype=torch.long)[:int(rate * ghost_num_p)]
     mask = torch.ones(ghost_num_p, device='cuda')
     mask[tmp_mask] = 0
+    assert torch.allclose(1 - mask.sum()/mask.numel(), torch.tensor(rate, dtype=torch.float), atol=0.01)
     num = 0
     ghost_mask = []
     for p in ghost_params:
