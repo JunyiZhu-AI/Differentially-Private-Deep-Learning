@@ -154,6 +154,7 @@ loss_func = nn.CrossEntropyLoss()
 params = []
 # list of low-rank parameters
 ghost_params = []
+ghost_velo = []
 
 for p in net.named_parameters():
     # we do not reparametrize linear layer because it is already low-rank
@@ -162,12 +163,14 @@ for p in net.named_parameters():
         p[1].requires_grad = False
     elif('left' in p[0]):
         ghost_params.append(p[1])
+        ghost_velo.append(torch.zeros_like(p[1]))
 
 for p in params:
     p.cached_grad = None
 
 # add the parameter of linear layer to low-rank parameters
 ghost_params += [params[-1]]
+ghost_velo.append(torch.zeros_like(params[-1]))
 
 
 # we use this optimizer to use the gradient reconstructed from the gradient carriers
@@ -276,9 +279,10 @@ def train(epoch):
             outputs_list.append(tiny_outputs.detach())
 
         # add noise for DP
-        for p in ghost_params:
+        for p, v in zip(ghost_params, ghost_velo):
             p.grad /= args.batchsize
-            p.grad += torch.normal(0, sigma*args.clipping/args.batchsize, size = p.shape).cuda()
+            v.data = v.mul(args.subspace_momentum) + p.grad.data + torch.normal(0, sigma*args.clipping/args.batchsize, size=p.shape).cuda()
+            p.grad.data = v.data
         # reconstruct update
         with torch.no_grad():
             for module in net.modules():
