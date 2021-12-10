@@ -229,6 +229,7 @@ def process_grad_sample(params, mask, gradient, clipping=1, inner_t=0):
         #     print(f'p shape: {p.shape}, p grad sample shape: {p.grad_sample.shape}, m shape: {m.shape}')
         #     raise RuntimeError
         p.grad_sample.mul_(0.)
+        del p.grad_sample
 
 # Training
 def train(epoch):
