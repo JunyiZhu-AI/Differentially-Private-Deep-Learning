@@ -206,7 +206,7 @@ def process_grad_sample(params, mask, clipping=1, inner_t=0):
     n = params[0].grad_sample.shape[0]
     grad_norm_list = torch.zeros(n).cuda()
     for p, m in zip(params, mask):
-        p.grad_sample.mul_(m)
+        p.grad_sample.mul_(m.unsqueeze(dim=0))
         flat_g = p.grad_sample.view(n, -1)
         current_norm_list = torch.norm(flat_g, dim=1)
         grad_norm_list += torch.square(current_norm_list)
@@ -243,7 +243,7 @@ def train(epoch):
     num = 0
     ghost_mask = []
     for p in ghost_params:
-        ghost_mask.append(mask[num:num+p.numel()].reshape(p.shape).unsqueeze(dim=0))
+        ghost_mask.append(mask[num:num+p.numel()].reshape(p.shape))
         num += p.numel()
     assert num == ghost_num_p
 
@@ -279,10 +279,11 @@ def train(epoch):
             outputs_list.append(tiny_outputs.detach())
 
         # add noise for DP
-        for p, v in zip(ghost_params, ghost_velo):
+        for p, v, m in zip(ghost_params, ghost_velo, ghost_mask):
             p.grad /= args.batchsize
             v.data = v.mul(args.subspace_momentum) + p.grad.data + torch.normal(0, sigma*args.clipping/args.batchsize, size=p.shape).cuda()
             p.grad.data = v.data
+            assert torch.allclose(p.grad[torch.logical_not(m.type(torch.bool))], torch.tensor(0.))
         # reconstruct update
         with torch.no_grad():
             for module in net.modules():
