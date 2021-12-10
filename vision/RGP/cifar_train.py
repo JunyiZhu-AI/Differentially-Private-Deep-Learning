@@ -202,7 +202,7 @@ def clip_column(grad_sample, threshold=1.0):
     scale = torch.clamp(threshold/norms, max=1.0)
     grad_sample *= scale.view(-1, 1, 1)
 
-def process_grad_sample(params, mask, clipping=1, inner_t=0):
+def process_grad_sample(params, mask, gradient, clipping=1, inner_t=0):
     n = params[0].grad_sample.shape[0]
     grad_norm_list = torch.zeros(n).cuda()
     for p, m in zip(params, mask):
@@ -214,14 +214,20 @@ def process_grad_sample(params, mask, clipping=1, inner_t=0):
     scaling = clipping/grad_norm_list
     scaling[scaling>1] = 1
 
-    for p in params:
+    for p, g in zip(params, gradient):
         p_dim = len(p.shape)
         scaling = scaling.view([n] + [1]*p_dim)
         p.grad_sample *= scaling
-        if(inner_t == 0):
-            p.grad = torch.sum(p.grad_sample, dim=0)
-        else:
-            p.grad += torch.sum(p.grad_sample, dim=0)
+        # if(inner_t == 0):
+        #     p.grad = torch.sum(p.grad_sample, dim=0)
+        # else:
+        #     p.grad += torch.sum(p.grad_sample, dim=0)
+        g.data += torch.sum(p.grad_sample, dim=0)
+        # assert torch.all(g.data[torch.logical_not(m.type(torch.bool))] == 0)
+        # print(f'{g.data[torch.logical_not(m.type(torch.bool))]}   shape:{g.shape}')
+        # if not torch.all(g.data[torch.logical_not(m.type(torch.bool))] == 0):
+        #     print(f'p shape: {p.shape}, p grad sample shape: {p.grad_sample.shape}, m shape: {m.shape}')
+        #     raise RuntimeError
         p.grad_sample.mul_(0.)
 
 # Training
@@ -247,6 +253,10 @@ def train(epoch):
         num += p.numel()
     assert num == ghost_num_p
 
+    gradient = []
+    for p in ghost_params:
+        gradient.append(torch.zeros_like(p))
+
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
@@ -271,7 +281,7 @@ def train(epoch):
             tiny_loss = loss_func(tiny_outputs, tiny_targets)
             tiny_loss.backward()
             # gradient clipping
-            process_grad_sample(ghost_params, ghost_mask, clipping=args.clipping, inner_t=t)
+            process_grad_sample(ghost_params, ghost_mask, gradient, clipping=args.clipping, inner_t=t)
             if(loss == None):
                 loss = tiny_loss.detach()/inner_t
             else:
@@ -279,11 +289,12 @@ def train(epoch):
             outputs_list.append(tiny_outputs.detach())
 
         # add noise for DP
-        for p, v, m in zip(ghost_params, ghost_velo, ghost_mask):
-            p.grad /= args.batchsize
-            v.data = v.mul(args.subspace_momentum) + p.grad.data + torch.normal(0, sigma*args.clipping/args.batchsize, size=p.shape).cuda()
-            p.grad.data = v.data
-            assert torch.allclose(p.grad[torch.logical_not(m.type(torch.bool))], torch.tensor(0.))
+        for p, v, m, g in zip(ghost_params, ghost_velo, ghost_mask, gradient):
+            g /= args.batchsize
+            assert torch.all(g.data[torch.logical_not(m.type(torch.bool))] == 0)
+            v.data = v.mul(args.subspace_momentum) + g.data + \
+                     torch.normal(0, sigma*args.clipping/args.batchsize, size=p.shape).cuda() * m
+            p.grad = v.data
         # reconstruct update
         with torch.no_grad():
             for module in net.modules():
@@ -301,6 +312,10 @@ def train(epoch):
         total += targets.size(0)
         correct += predicted.eq(targets.data).float().cpu().sum()
         acc = 100.*float(correct)/float(total)
+
+        gradient = []
+        for p in ghost_params:
+            gradient.append(torch.zeros_like(p))
     
     if(epoch + 1 == args.warmup_epoch):
         # take a snapshot of current model for computing historical update
