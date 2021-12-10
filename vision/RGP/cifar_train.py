@@ -295,6 +295,8 @@ def train(epoch):
             v.data = v.mul(args.subspace_momentum) + g.data + \
                      torch.normal(0, sigma*args.clipping/args.batchsize, size=p.shape).cuda() * m
             p.grad = v.data
+            if args.subspace_momentum == 0:
+                assert torch.all(p.grad[torch.logical_not(m.type(torch.bool))] == 0)
         # reconstruct update
         with torch.no_grad():
             for module in net.modules():
@@ -408,6 +410,6 @@ if not os.path.isfile(os.path.join(path, 'res.csv')):
             df.to_csv(os.path.join(path, f'res.csv'), index=False)
             break
         except:
-            time.sleep(30)
+            time.sleep(60)
 
 
