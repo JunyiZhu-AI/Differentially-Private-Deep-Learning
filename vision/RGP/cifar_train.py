@@ -269,7 +269,7 @@ def train(epoch):
             net.module.decomposite_weight()
 
         # use multiple micro-batches
-        stepsize = 250
+        stepsize = 200
         inner_t = args.batchsize // stepsize
         if(args.batchsize % stepsize != 0):
             raise 'batchsize should be an integer multiple of 250.'
