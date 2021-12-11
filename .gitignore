@@ -2,3 +2,4 @@
 *config.yaml
 *__pycache__
 *.csv
+*bert_code
