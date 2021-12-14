@@ -50,6 +50,9 @@ use_cuda = torch.cuda.is_available()
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 batch_size = args.batchsize
 best_acc = 0
+torch.manual_seed(0)
+np.random.seed(0)
+
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 with open("config.yaml", "r") as stream:
