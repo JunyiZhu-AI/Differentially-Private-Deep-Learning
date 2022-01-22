@@ -138,14 +138,14 @@ logname = os.path.join(result_folder, args.sess  + '.csv')
 
 if use_cuda:
     net.cuda()
-    net = torch.nn.DataParallel(net)
-    num_gpu = torch.cuda.device_count()
-    print('Using', num_gpu, 'GPUs.')
-    cudnn.benchmark = True
-    if(num_gpu == 1):
-        print('Using CUDA..')
-    else:
-        print('Do not support parallelism, please use only one GPU. (try \'CUDA_VISIBLE_DEVICES=0 python .... \')')
+    # net = torch.nn.DataParallel(net)
+    # num_gpu = torch.cuda.device_count()
+    # print('Using', num_gpu, 'GPUs.')
+    # cudnn.benchmark = True
+    # if(num_gpu == 1):
+    #     print('Using CUDA..')
+    # else:
+    #     print('Do not support parallelism, please use only one GPU. (try \'CUDA_VISIBLE_DEVICES=0 python .... \')')
 
 
 loss_func = nn.CrossEntropyLoss()
