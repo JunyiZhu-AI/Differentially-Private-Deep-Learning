@@ -1,4 +1,5 @@
-# The functions for computing individual gradients are borrowed from https://github.com/pytorch/opacus
+# The functions for computing individual gradients are borrowed from
+# https://github.com/pytorch/opacus
 
 from typing import Union
 

@@ -83,16 +83,16 @@ testset = CachedCIFAR10(root=CONFIG['path_to_dataset'], train=False, download=Tr
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=0)
 testloader = torch.utils.data.DataLoader(testset, batch_size=200, shuffle=False, num_workers=0)
 
-t_trainloader = tqdm.tqdm(trainloader)
-for _ in t_trainloader:
-    t_trainloader.set_description(f'Cached training data: {len(trainloader.dataset.cached_data)}')
-t_testloader = tqdm.tqdm(testloader)
-for _ in t_testloader:
-    t_testloader.set_description(f'Cached training data: {len(testloader.dataset.cached_data)}')
-trainloader.dataset.set_use_cache(use_cache=True)
-trainloader.num_workers = CONFIG['num_workers']
-testloader.dataset.set_use_cache(use_cache=True)
-testloader.num_workers = CONFIG['num_workers']
+# t_trainloader = tqdm.tqdm(trainloader)
+# for _ in t_trainloader:
+#     t_trainloader.set_description(f'Cached training data: {len(trainloader.dataset.cached_data)}')
+# t_testloader = tqdm.tqdm(testloader)
+# for _ in t_testloader:
+#     t_testloader.set_description(f'Cached training data: {len(testloader.dataset.cached_data)}')
+# trainloader.dataset.set_use_cache(use_cache=False)
+# trainloader.num_workers = CONFIG['num_workers']
+# testloader.dataset.set_use_cache(use_cache=False)
+# testloader.num_workers = CONFIG['num_workers']
 
 
 # Model
@@ -395,6 +395,7 @@ if not os.path.exists(logname):
 
 
 if not os.path.isfile(os.path.join(path, 'res.csv')):
+    print(args)
     for epoch in range(start_epoch, args.n_epoch):
         lr = adjust_learning_rate(optimizer, epoch)
 

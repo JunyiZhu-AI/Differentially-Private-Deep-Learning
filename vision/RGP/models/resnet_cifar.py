@@ -119,6 +119,7 @@ class LrkConv2d(nn.Module):
 
     # update initial weight, used for calculating historical update
     def _update_init_weight(self):
+        print("Update init weight.")
         self.init_weight[0] = self.init_weight[1]/self.init_weight[1].norm()
         self.init_weight[1] = self.full_conv.weight.data.clone()
          
@@ -153,7 +154,7 @@ class LrkConv2d(nn.Module):
             lrk_x = self.right_layer(x)
             lrk_x = self.left_layer(lrk_x)
 
-            residual_x = self.full_conv(x)
+            residual_x = self.full_conv(x) # why double input
 
             return lrk_x + residual_x
         else:
