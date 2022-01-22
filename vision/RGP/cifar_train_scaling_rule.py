@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import random
 import torch.optim as optim
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
@@ -52,6 +53,8 @@ batch_size = args.batchsize
 best_acc = 0
 torch.manual_seed(0)
 np.random.seed(0)
+torch.cuda.manual_seed(0)
+random.seed(0)
 
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
