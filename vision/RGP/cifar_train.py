@@ -266,7 +266,7 @@ def train(epoch):
             if(hasattr(m, '_update_weight')):
                 m.is_training = True
         with torch.no_grad():
-            net.module.decomposite_weight()
+            net.decomposite_weight()
 
         # use multiple micro-batches
         stepsize = 200
@@ -305,7 +305,7 @@ def train(epoch):
                     full_grad = module.get_full_grad(args.lr)
                     module.full_conv.weight.grad = full_grad
 
-        net.module.update_weight()
+        net.update_weight()
         outputs = torch.cat(outputs_list)
         optimizer.step()
         optimizer.zero_grad()
@@ -322,7 +322,7 @@ def train(epoch):
     
     if(epoch + 1 == args.warmup_epoch):
         # take a snapshot of current model for computing historical update
-        net.module.update_init_weight()
+        net.update_init_weight()
 
 
     t1 = time.time()
