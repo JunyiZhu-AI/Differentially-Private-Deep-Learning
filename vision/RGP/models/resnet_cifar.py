@@ -154,7 +154,7 @@ class LrkConv2d(nn.Module):
             lrk_x = self.right_layer(x)
             lrk_x = self.left_layer(lrk_x)
 
-            residual_x = self.full_conv(x) # why double input
+            residual_x = self.full_conv(x)
 
             return lrk_x + residual_x
         else:
@@ -258,7 +258,7 @@ class ResNet(nn.Module):
         # we do not reparametrize linear layer because it is already low-rank
         self.fc = nn.Linear(64 * k, num_classes, bias=False)
         self.fc.register_forward_hook(LinearFowardHook)
-        self.fc.register_backward_hook(LinearBackwardHook)
+        self.fc.register_full_backward_hook(LinearBackwardHook)
         # standard initialization
         for m in self.modules():
             if isinstance(m, nn.Conv2d):

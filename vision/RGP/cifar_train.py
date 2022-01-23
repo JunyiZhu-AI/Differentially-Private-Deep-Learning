@@ -8,6 +8,7 @@ import torchvision
 import torchvision.transforms as transforms
 import pandas as pd
 import os
+import random
 import argparse
 import csv
 import yaml
@@ -25,6 +26,7 @@ parser.add_argument('--resume', '-r', action='store_true', help='resume from che
 parser.add_argument('--sess', default='resnet', type=str, help='session name')
 parser.add_argument('--weight_decay', default=1e-4, type=float, help='weight decay (default=1e-4)')
 parser.add_argument('--batchsize', default=1000, type=int, help='batch size')
+parser.add_argument('--mini_batchsize', default=1000, type=int, help='mini batch size')
 parser.add_argument('--n_epoch', default=400, type=int, help='total number of epochs')
 parser.add_argument('--lr', default=0.4, type=float, help='base learning rate (default=0.4)')
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum coeeficient')
@@ -269,7 +271,7 @@ def train(epoch):
             net.decomposite_weight()
 
         # use multiple micro-batches
-        stepsize = 200
+        stepsize = args.mini_batchsize
         inner_t = args.batchsize // stepsize
         if(args.batchsize % stepsize != 0):
             raise 'batchsize should be an integer multiple of 250.'
@@ -396,6 +398,10 @@ if not os.path.exists(logname):
 
 if not os.path.isfile(os.path.join(path, 'res.csv')):
     print(args)
+    torch.manual_seed(0)
+    np.random.seed(0)
+    random.seed(0)
+    torch.cuda.manual_seed(0)
     for epoch in range(start_epoch, args.n_epoch):
         lr = adjust_learning_rate(optimizer, epoch)
 
