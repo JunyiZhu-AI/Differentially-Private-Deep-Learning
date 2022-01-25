@@ -230,8 +230,9 @@ def process_grad_sample(params, mask, gradient, clipping=1, inner_t=0):
         # if not torch.all(g.data[torch.logical_not(m.type(torch.bool))] == 0):
         #     print(f'p shape: {p.shape}, p grad sample shape: {p.grad_sample.shape}, m shape: {m.shape}')
         #     raise RuntimeError
-        p.grad_sample.mul_(0.)
-        del p.grad_sample
+        # p.grad_sample.mul_(0.)
+        # del p.grad_sample
+        p.grad_sample = None
 
 # Training
 def train(epoch):
@@ -297,7 +298,8 @@ def train(epoch):
             assert torch.all(g.data[torch.logical_not(m.type(torch.bool))] == 0)
             v.data = v.mul(args.subspace_momentum) + g.data + \
                      torch.normal(0, sigma*args.clipping/args.batchsize, size=p.shape).cuda() * m
-            p.grad = v.data
+            # p.grad = v.data
+            p.grad = v.detach.clone()
             if args.subspace_momentum == 0:
                 assert torch.all(p.grad[torch.logical_not(m.type(torch.bool))] == 0)
         # reconstruct update
